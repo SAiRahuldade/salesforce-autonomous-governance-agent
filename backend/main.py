@@ -1,5 +1,9 @@
+from typing import Dict
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from requests.exceptions import Timeout
 from dotenv import load_dotenv
 
 from backend.services.sf_oauth import SalesforceOAuth
@@ -29,6 +33,10 @@ class AppState:
     rem_agent = None
 
 state = AppState()
+
+
+class RemediationApplyRequest(BaseModel):
+    fix: Dict
 
 @app.on_event("startup")
 async def startup():
@@ -114,3 +122,17 @@ def analyze_governance():
     contacts = state.sf.query("SELECT Id, FirstName, LastName, Email, Phone, AccountId FROM Contact LIMIT 50")['records']
     leads = state.sf.query("SELECT Id, FirstName, LastName, Email, Company FROM Lead LIMIT 50")['records']
     return state.gov_agent.analyze(accounts, contacts, leads)
+
+@app.post("/remediation/apply")
+def apply_remediation(request: RemediationApplyRequest):
+    """Apply one recommended remediation action when safe."""
+    try:
+        result = state.rem_agent.apply_fix(state.sf, request.fix)
+        return result
+    except Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Salesforce timed out while applying this fix. Check your connection or VPN, then try again."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
