@@ -16,7 +16,12 @@ function App() {
       const response = await axios.post(`${API_URL}/analyze/full`);
       setReport(response.data.report);
     } catch (err) {
-      setError("Failed to connect to backend. Make sure FastAPI is running.");
+      const detail = err.response?.data?.detail;
+      setError(
+        detail
+          ? `Backend error: ${detail}`
+          : "Failed to connect to backend. Make sure FastAPI is running."
+      );
     } finally {
       setLoading(false);
     }

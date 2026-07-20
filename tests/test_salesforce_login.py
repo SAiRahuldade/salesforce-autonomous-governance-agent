@@ -20,6 +20,10 @@ def get_env(*names):
 
 
 def test_login() -> None:
+    if os.getenv("RUN_LIVE_SF_TESTS", "0") != "1":
+        import pytest
+        pytest.skip("Skipping live Salesforce login test (set RUN_LIVE_SF_TESTS=1 to enable).")
+
     instance_url = get_env("SF_INSTANCE_URL", "SALESFORCE_INSTANCE_URL")
     access_token = get_env("SF_ACCESS_TOKEN", "SALESFORCE_ACCESS_TOKEN")
 

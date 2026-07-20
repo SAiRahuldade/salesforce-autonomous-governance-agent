@@ -1,4 +1,6 @@
 import StatCards from "./StatCards";
+import RecordsTable from "./RecordsTable";
+import GovernanceIssuesTable from "./GovernanceIssuesTable";
 import DuplicatesTable from "./DuplicatesTable";
 import ValidationTable from "./ValidationTable";
 import GovernancePanel from "./GovernancePanel";
@@ -10,8 +12,14 @@ function Dashboard({ report, onApplyRemediation }) {
       {/* STAT CARDS */}
       <StatCards report={report} />
 
+      {/* SOURCE RECORDS */}
+      <RecordsTable records={report.source_records} />
+
+      {/* GOVERNANCE ISSUES */}
+      <GovernanceIssuesTable governanceIssues={report.governance_issues} />
+
       {/* GOVERNANCE HEALTH */}
-      <GovernancePanel governance={report.governance} />
+      <GovernancePanel governance={report.governance} summaryMetrics={report.summary_metrics} />
 
       {/* DUPLICATES */}
       <DuplicatesTable duplicates={report.duplicate_detection} />
@@ -22,6 +30,7 @@ function Dashboard({ report, onApplyRemediation }) {
       {/* REMEDIATION */}
       <RemediationTable
         remediation={report.remediation}
+        governanceIssues={report.governance_issues}
         onApplyRemediation={onApplyRemediation}
       />
     </div>

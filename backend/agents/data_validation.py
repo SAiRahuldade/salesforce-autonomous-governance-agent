@@ -49,7 +49,8 @@ class DataValidationAgent:
     
     def _validate_contacts(self, contacts: List[Dict]) -> List[Dict]:
         issues = []
-        
+        email_regex = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
         for con in contacts:
             name = f"{con.get('FirstName','')} {con.get('LastName','')}".strip()
             
@@ -61,17 +62,19 @@ class DataValidationAgent:
                     "record_id": con['Id'],
                     "record_name": name,
                     "field": "Email",
+                    "issue_type": "missing_email",
                     "issue": "Missing email address",
-                    "severity": "critical"
+                    "severity": "warning",
                 })
-            elif not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', str(email)):
+            elif not email_regex.match(str(email)):
                 issues.append({
                     "object": "Contact",
                     "record_id": con['Id'],
                     "record_name": name,
                     "field": "Email",
+                    "issue_type": "malformed_email",
                     "issue": f"Invalid email format: {email}",
-                    "severity": "critical"
+                    "severity": "critical",
                 })
             
             # Check phone
@@ -92,15 +95,16 @@ class DataValidationAgent:
         
         for lead in leads:
             name = f"{lead.get('FirstName','')} {lead.get('LastName','')}".strip()
-            
-            if not lead.get('Email'):
+            email = lead.get('Email')
+            if not email:
                 issues.append({
                     "object": "Lead",
                     "record_id": lead['Id'],
                     "record_name": name,
                     "field": "Email",
+                    "issue_type": "missing_email",
                     "issue": "Missing email address",
-                    "severity": "critical"
+                    "severity": "warning",
                 })
             
             if not lead.get('Company'):

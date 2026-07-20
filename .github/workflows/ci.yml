@@ -1,0 +1,112 @@
+name: CI — Python Tests + Scratch Org Deployment
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  python-tests:
+    name: Python Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Run Python tests
+        run: pytest --tb=short -v
+
+  scratch-org-ci:
+    name: Scratch Org Deploy + Apex Tests + Jest
+    runs-on: ubuntu-latest
+    if: ${{ vars.SF_ENABLE_APEX_CI == 'true' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: |
+          npm install --global @salesforce/cli@latest
+          sf --version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Authenticate to Dev Hub
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+        run: |
+          echo "$SFDX_AUTH_URL" > /tmp/sfdx-auth-url.txt
+          sf org login sfdx-url \
+            --sfdx-url-file /tmp/sfdx-auth-url.txt \
+            --alias devhub \
+            --set-default-dev-hub
+          rm /tmp/sfdx-auth-url.txt
+
+      - name: Create scratch org
+        run: |
+          sf org create scratch \
+            --definition-file salesforce/config/project-scratch-def.json \
+            --set-default \
+            --alias governance-ci \
+            --duration-days 1
+
+      - name: Deploy metadata to scratch org
+        working-directory: salesforce
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --target-org governance-ci \
+            --wait 10
+
+      - name: Run Apex tests with coverage
+        working-directory: salesforce
+        run: |
+          sf apex run test \
+            --target-org governance-ci \
+            --test-level RunLocalTests \
+            --code-coverage \
+            --result-format json \
+            --wait 10 > /tmp/apex-results.json
+          python - <<'PY'
+import json, sys
+from pathlib import Path
+p = Path('/tmp/apex-results.json')
+data = json.loads(p.read_text())
+summary = data.get('result', {}).get('summary', {})
+coverage = summary.get('orgWideCoverage', '0%')
+print(f'Org-wide coverage: {coverage}')
+try:
+    pct = float(str(coverage).strip('%'))
+except Exception:
+    pct = 0.0
+if pct < 85:
+    raise SystemExit(f'Coverage {coverage} is below 85%')
+if not summary.get('passing'):
+    raise SystemExit('Apex tests failed')
+PY
+
+      - name: Run frontend Jest tests
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test -- --watch=false
+
+      - name: Delete scratch org (cleanup)
+        if: always()
+        run: |
+          sf org delete scratch -o governance-ci --no-prompt || true

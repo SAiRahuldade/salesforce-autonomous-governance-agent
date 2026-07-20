@@ -22,48 +22,93 @@ function StatCards({ report }) {
   const gov = report.governance?.summary || {};
   const rem = report.remediation?.summary || {};
 
+  const govIssuesCount = report.governance_issues?.data?.issues?.length || 0;
+  const govCritical = report.governance_issue_counts?.critical || 0;
+  const govPending = report.governance_approval_counts?.pending_approval || 0;
+
+  // Combined aggregate metrics from backend summary_metrics
+  const metrics = report.summary_metrics || {};
+  const combinedCritical = metrics.critical_count ?? (
+    (val.critical || 0) + (comp.critical || 0) + govCritical
+  );
+  const pendingApproval = metrics.pending_approval_count ?? govPending;
+  const approvedCount = metrics.approved_count ?? 0;
+
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(5, 1fr)",
-      gap: "16px",
-      marginBottom: "24px"
-    }}>
-      <StatCard
-        icon="⚠️"
-        title="Duplicates Found"
-        value={dup.total_duplicates_found || 0}
-        subtitle={`${dup.account_duplicates || 0} accounts, ${dup.contact_duplicates || 0} contacts`}
-        color="#f59e0b"
-      />
-      <StatCard
-        icon="❌"
-        title="Validation Issues"
-        value={val.total_issues || 0}
-        subtitle={`${val.critical || 0} critical, ${val.warnings || 0} warnings`}
-        color="#ef4444"
-      />
-      <StatCard
-        icon="📋"
-        title="Compliance Violations"
-        value={comp.total_violations || 0}
-        subtitle={`${comp.critical || 0} critical, ${comp.warnings || 0} warnings`}
-        color="#8b5cf6"
-      />
-      <StatCard
-        icon="💚"
-        title="Health Score"
-        value={`${gov.health_score || 0}`}
-        subtitle={`Grade: ${gov.health_grade || 'N/A'}`}
-        color="#22c55e"
-      />
-      <StatCard
-        icon="🔧"
-        title="Fixes Recommended"
-        value={rem.total_fixes || 0}
-        subtitle={`${rem.manual_review || 0} need manual review`}
-        color="#3b82f6"
-      />
+    <div>
+      {/* ── Top summary row: critical & approval counts ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+        gap: "16px",
+        marginBottom: "16px"
+      }}>
+        <StatCard
+          icon="🚨"
+          title="Critical Issues"
+          value={combinedCritical}
+          subtitle="Combined across all agents & governance"
+          color="#ef4444"
+        />
+        <StatCard
+          icon="⏳"
+          title="Pending Approval"
+          value={pendingApproval}
+          subtitle={`${approvedCount} already approved`}
+          color="#f59e0b"
+        />
+      </div>
+
+      {/* ── Main stat cards grid ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: "16px",
+        marginBottom: "24px"
+      }}>
+        <StatCard
+          icon="⚠️"
+          title="Duplicates Found"
+          value={dup.total_duplicates_found || 0}
+          subtitle={`${dup.account_duplicates || 0} accounts, ${dup.contact_duplicates || 0} contacts`}
+          color="#f59e0b"
+        />
+        <StatCard
+          icon="❌"
+          title="Validation Issues"
+          value={val.total_issues || 0}
+          subtitle={`${val.critical || 0} critical, ${val.warnings || 0} warnings`}
+          color="#ef4444"
+        />
+        <StatCard
+          icon="📋"
+          title="Compliance Violations"
+          value={comp.total_violations || 0}
+          subtitle={`${comp.critical || 0} critical, ${comp.warnings || 0} warnings`}
+          color="#8b5cf6"
+        />
+        <StatCard
+          icon="💚"
+          title="Health Score"
+          value={`${gov.health_score || 0}`}
+          subtitle={`Grade: ${gov.health_grade || 'N/A'}`}
+          color="#22c55e"
+        />
+        <StatCard
+          icon="🔧"
+          title="Fixes Recommended"
+          value={rem.total_fixes || 0}
+          subtitle={`${rem.manual_review || 0} need manual review`}
+          color="#3b82f6"
+        />
+        <StatCard
+          icon="⚖️"
+          title="Native Governance"
+          value={govIssuesCount}
+          subtitle={`${govCritical} critical, ${govPending} pending approval`}
+          color="#fb7185"
+        />
+      </div>
     </div>
   );
 }

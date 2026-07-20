@@ -1,10 +1,14 @@
-function GovernancePanel({ governance }) {
+function GovernancePanel({ governance, summaryMetrics }) {
   const score = governance?.data?.health_score || 0;
   const grade = governance?.summary?.health_grade || 'N/A';
   const recommendations = governance?.data?.recommendations || [];
   const stats = governance?.data?.org_stats || {};
 
   const scoreColor = score >= 90 ? "#22c55e" : score >= 75 ? "#f59e0b" : "#ef4444";
+
+  const criticalCount = summaryMetrics?.critical_count ?? 0;
+  const pendingCount = summaryMetrics?.pending_approval_count ?? 0;
+  const approvedCount = summaryMetrics?.approved_count ?? 0;
 
   return (
     <div style={{
@@ -39,6 +43,48 @@ function GovernancePanel({ governance }) {
           <div style={{ marginTop: "12px", fontSize: "13px", color: "#64748b" }}>
             Overall Health Score
           </div>
+
+          {/* ── Summary pill row ── */}
+          {summaryMetrics && (
+            <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "6px", alignItems: "center" }}>
+              <div style={{
+                background: criticalCount > 0 ? "#7f1d1d" : "#1e293b",
+                border: `1px solid ${criticalCount > 0 ? "#ef4444" : "#334155"}`,
+                borderRadius: "9999px",
+                padding: "4px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: criticalCount > 0 ? "#ef4444" : "#64748b",
+                minWidth: "140px"
+              }}>
+                🚨 {criticalCount} Critical
+              </div>
+              <div style={{
+                background: pendingCount > 0 ? "#713f12" : "#1e293b",
+                border: `1px solid ${pendingCount > 0 ? "#f59e0b" : "#334155"}`,
+                borderRadius: "9999px",
+                padding: "4px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: pendingCount > 0 ? "#f59e0b" : "#64748b",
+                minWidth: "140px"
+              }}>
+                ⏳ {pendingCount} Pending Approval
+              </div>
+              <div style={{
+                background: "#14532d",
+                border: "1px solid #22c55e44",
+                borderRadius: "9999px",
+                padding: "4px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#4ade80",
+                minWidth: "140px"
+              }}>
+                ✅ {approvedCount} Approved
+              </div>
+            </div>
+          )}
         </div>
 
         {/* STATS + RECOMMENDATIONS */}
@@ -89,4 +135,4 @@ function GovernancePanel({ governance }) {
   );
 }
 
-export default GovernancePanel;
+export default GovernancePanel;

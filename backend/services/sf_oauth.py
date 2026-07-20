@@ -6,8 +6,10 @@ from dotenv import load_dotenv
 from requests.exceptions import Timeout
 
 
-env_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(env_path)
+root_env_path = Path(__file__).resolve().parents[2] / ".env"
+backend_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(root_env_path)
+load_dotenv(backend_env_path, override=True)
 
 
 class SalesforceOAuth:

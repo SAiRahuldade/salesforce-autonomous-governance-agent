@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>59.0</apiVersion>
+    <description>Record-Triggered Flow on Account. When an Account is updated and a Governance_Issue__c with Safe_to_Automate = true exists for it, calls the RemediationInvocable Apex action to apply the fix automatically.</description>
+    <interviewLabel>GovernanceRemediation {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Governance Auto-Remediation</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value><stringValue>LightningFlowBuilder</stringValue></value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>176</locationX>
+        <locationY>48</locationY>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Industry</field>
+            <operator>IsNull</operator>
+            <value><booleanValue>true</booleanValue></value>
+        </filters>
+        <object>Account</object>
+        <recordTriggerType>Update</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <actionCalls>
+        <description>Call Apex RemediationInvocable to set Industry = Unknown for accounts with missing Industry field.</description>
+        <name>Apply_Industry_Fix</name>
+        <label>Apply Industry Fix</label>
+        <locationX>176</locationX>
+        <locationY>168</locationY>
+        <actionName>RemediationInvocable</actionName>
+        <actionType>apex</actionType>
+        <inputParameters>
+            <name>recordId</name>
+            <value><elementReference>$Record.Id</elementReference></value>
+        </inputParameters>
+        <inputParameters>
+            <name>objectApiName</name>
+            <value><stringValue>Account</stringValue></value>
+        </inputParameters>
+        <inputParameters>
+            <name>fieldApiName</name>
+            <value><stringValue>Industry</stringValue></value>
+        </inputParameters>
+        <inputParameters>
+            <name>newValue</name>
+            <value><stringValue>Unknown</stringValue></value>
+        </inputParameters>
+    </actionCalls>
+</Flow>

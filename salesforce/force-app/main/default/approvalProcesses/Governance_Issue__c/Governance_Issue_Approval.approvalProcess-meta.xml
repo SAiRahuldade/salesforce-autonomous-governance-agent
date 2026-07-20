@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Governance_Issue_Approval</fullName>
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <description>Approval workflow for critical governance remediation issues.</description>
+    <entryCriteria>
+        <booleanFilter>1 OR 2</booleanFilter>
+        <criteriaItems>
+            <field>Governance_Issue__c.Severity__c</field>
+            <operation>equals</operation>
+            <value>critical</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Governance_Issue__c.Issue__c</field>
+            <operation>equals</operation>
+            <value>duplicate_merge</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>Approve_Governance_Issue</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>true</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>Reject_Governance_Issue</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Governance Issue Approval</label>
+    <processOrder>1</processOrder>
+    <recordEditability>AdminOnly</recordEditability>
+    <approvalStep>
+        <allowDelegate>false</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>Data_Stewards</name>
+                <type>queue</type>
+            </approver>
+        </assignedApprover>
+        <label>Data Steward Review</label>
+        <name>Data_Steward_Review</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+</ApprovalProcess>

@@ -9,7 +9,7 @@ Usage:
 After successful auth the access token will be displayed and saved to backend/.env as SF_ACCESS_TOKEN.
 """
 
-from flask import Flask, redirect, request, url_for, session
+from flask import Flask, redirect, request, url_for
 import os
 import requests
 import hashlib
@@ -21,10 +21,9 @@ from urllib.parse import urlencode
 load_dotenv()
 
 app = Flask(__name__)
-# session secret for PKCE verifier storage
-# Use a stable default so the verifier survives debug reloads.
-app.secret_key = os.getenv('FLASK_SECRET', 'dev-super-secret-pkce-key')
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Store PKCE verifiers temporarily in memory (keyed by state)
+pkce_store = {}
 
 CLIENT_ID = os.getenv('SF_CLIENT_ID')
 CLIENT_SECRET = os.getenv('SF_CLIENT_SECRET')
@@ -48,7 +47,10 @@ def index():
     code_challenge = base64.urlsafe_b64encode(
         hashlib.sha256(code_verifier.encode('utf-8')).digest()
     ).decode('utf-8').rstrip('=')
-    session['code_verifier'] = code_verifier
+    
+    # Generate state and store verifier
+    state = secrets.token_urlsafe(32)
+    pkce_store[state] = code_verifier
 
     params = {
         'response_type': 'code',
@@ -56,6 +58,7 @@ def index():
         'redirect_uri': REDIRECT_URI,
         'code_challenge': code_challenge,
         'code_challenge_method': 'S256',
+        'state': state,
     }
     auth_full = AUTH_URL + '?' + urlencode(params)
     return f'<h3>Salesforce OAuth</h3><p><a href="{auth_full}">Authorize</a></p>'
@@ -68,8 +71,15 @@ def callback():
         return f'Error: {error} - {request.args.get("error_description")}'
 
     code = request.args.get('code')
+    state = request.args.get('state')
+    
     if not code:
         return 'Missing code in callback', 400
+    
+    if not state or state not in pkce_store:
+        return 'Invalid or missing state parameter', 400
+
+    code_verifier = pkce_store.pop(state)  # Use and remove verifier
 
     data = {
         'grant_type': 'authorization_code',
@@ -77,16 +87,8 @@ def callback():
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET,
         'redirect_uri': REDIRECT_URI,
+        'code_verifier': code_verifier,
     }
-
-    # include code_verifier for PKCE
-    code_verifier = session.get('code_verifier')
-    if not code_verifier:
-        return ('Failed to exchange token: missing code verifier in session. ' 
-                'Make sure you access the app using the same host (http://localhost:8000) ' 
-                'and refresh the page before authorizing.'), 400
-
-    data['code_verifier'] = code_verifier
 
     resp = requests.post(TOKEN_URL, data=data)
     try:
@@ -113,4 +115,5 @@ def callback():
 
 if __name__ == '__main__':
     # bind to all interfaces for localhost access and use configured port
-    app.run(debug=True, host='0.0.0.0', port=PORT)
+    # Disable debug mode to prevent Flask reloader from clearing pkce_store
+    app.run(debug=False, host='0.0.0.0', port=PORT)
